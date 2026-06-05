@@ -64,29 +64,33 @@ public class AuthController {
 
 	@GetMapping("/perfil")
 	public ResponseEntity<?> perfil(
-	        @RequestHeader("Authorization") String authHeader) {
+	        @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-	    try {
-	        String token = authHeader.replace("Bearer ", "");
+	    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
 
-	        DecodedJWT tokenDecodificado = JwtUtil.validarToken(token);
-
-	        if (tokenDecodificado == null) {
-
-	            return ResponseEntity
-	                    .status(HttpStatus.UNAUTHORIZED)
-	                    .body("Token inválido");
-	        }
-
-	        String username = tokenDecodificado.getSubject();
-	        String rol = tokenDecodificado.getClaim("rol").asString();
-
-	        return ResponseEntity.ok("Bienvenido " + username + ". Rol: " + rol);
-
-	    } catch (Exception e) {
-
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body("Acceso Denegado: Debes proveer un token Bearer válido en la cabecera Authorization");
 	    }
+
+	    String token = authHeader.substring(7);
+
+	    DecodedJWT datosToken = JwtUtil.validarToken(token);
+
+	    if (datosToken == null) {
+
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body("Acceso Denegado: Token Inválido o Expirado");
+	    }
+
+	    String usuario = datosToken.getSubject();
+	    String rol = datosToken.getClaim("rol").asString();
+
+	    return ResponseEntity.ok(Map.of(
+	            "Mensaje", "Bienvenido al sistema protegido por JWT",
+	            "Usuario", usuario,
+	            "Rol", rol,
+	            "Estatus", "Autenticado Exitosamente"
+	    ));
 	}
 
 }
